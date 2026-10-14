@@ -1,6 +1,10 @@
-﻿# Webhook Relay API
+# Signed Webhook Relay
 
-Webhook Relay is a **portfolio demonstration** sandbox for testing outbound webhooks. Register a callback URL with an API key, trigger signed JSON events (HMAC-SHA256), and inspect delivery attempts. It uses file-backed storage and an in-memory token-bucket rate limiter—not production-grade Redis infrastructure.
+Webhook Relay is a sandbox for testing outbound webhooks. Register a callback URL with an API key, trigger signed JSON events (HMAC-SHA256), and inspect delivery attempts. It uses file-backed storage and an in-memory token-bucket rate limiter, not production-grade Redis infrastructure.
+
+## Why I built it
+
+I built this to understand how services like Stripe and GitHub deliver webhooks: signing the payload so the receiver can trust it, recording every attempt, and keeping one noisy client from flooding the server.
 
 ## Stack
 
@@ -18,8 +22,8 @@ Webhook Relay is a **portfolio demonstration** sandbox for testing outbound webh
 ## Setup
 
 ```bash
-git clone https://github.com/zacharyahutton/webhook-relay-api.git
-cd webhook-relay-api
+git clone https://github.com/zacharyahutton/signed-webhook-relay.git
+cd signed-webhook-relay
 python -m venv .venv
 .venv\Scripts\activate   # Windows
 # source .venv/bin/activate
@@ -34,7 +38,7 @@ uvicorn app.main:app --reload
 
 Docs: http://127.0.0.1:8000/docs
 
-Demo API key: `demo-key` (secret used for signing: `demo-secret` — hard-coded for learning only).
+Demo API key: `demo-key` (secret used for signing: `demo-secret`, hard-coded for local testing).
 
 ## How to test
 
@@ -80,7 +84,7 @@ Excessive requests with the same `X-API-Key` return `429` with `Retry-After: 1`.
 
 | Method | Path | Headers | Description |
 |--------|------|---------|-------------|
-| GET | `/health` | — | Health check |
+| GET | `/health` |, | Health check |
 | POST | `/webhooks` | `X-API-Key` | Register callback URL |
 | POST | `/events/trigger` | `X-API-Key` | Deliver signed event (retries with backoff) |
 | GET | `/deliveries` | `X-API-Key` | Delivery history for this key |
@@ -96,9 +100,9 @@ data/
   store.json      Created at runtime (gitignored)
 ```
 
-## Portfolio disclaimer
+## Limitations
 
-Linked from the [Webhook Relay case study](https://github.com/zacharyahutton/portfolio). The portfolio write-up discusses Redis token buckets, dead-letter queues, and replay endpoints; **this repo implements a simplified, honest slice** so you can clone and run it without Redis.
+Storage is a JSON file and rate limiting is in memory, so this runs as a single process with no Redis. There are no automatic retries yet.
 
 ## VS Code
 
@@ -119,3 +123,9 @@ Workspace settings live in `.vscode/` (`extensions.json`, `launch.json`, `tasks.
 ## License
 
 MIT
+
+## Roadmap
+
+- Retries with exponential backoff and a dead letter list
+- Swap the JSON file store for SQLite or Postgres
+- Per-webhook secrets instead of the shared demo secret
